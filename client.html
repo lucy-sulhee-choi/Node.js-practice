@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html>
+  <title>Movie Ratings and Streaming</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #b6ddc4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {color: #087e43;}
+    h2 {color: #087e43;}
+    h4 {color: #999;}
+    h5 {color:#b6ddc4}
+
+    #movies {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #movies input[type="text"] {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+    }
+
+    #movies button {
+      padding: 8px 12px;
+      background-color: #087e43;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    pre {
+      font-family: Arial, sans-serif;
+      white-space: pre-wrap;
+      background-color: #b6ddc4;
+      padding: 10px;
+      margin-top: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      line-height: 1.4;
+    }
+
+    #posters {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #posters input[type="text"] {
+      padding: 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      margin-right: 10px;
+    }
+
+    #posters button {
+      padding: 8px 12px;
+      background-color: #087e43;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+  </style>
+  <head>
+    <h1>Movie Ratings and Streaming API</h1>
+    <h4>This is the ratings and streaming info API<br></h4>
+    <h4>Servers : http://localhost:4000/</h4>
+  </head>
+  <body>
+    <div id="movies">
+      <h2>MOVIES</h2><h5>All the details about movies</h5>
+      <p>Enter movie title:</p>
+      <input type="text" id="title-input">
+      <button onclick="getMovieByTitle()">Search</button>
+      <p><br>Enter imdb ID:</p>
+      <input type="text" id="imdbID-input">
+      <button onclick="getMovieByImdbID()">Search</button>
+      <pre id="info"></pre> 
+      <pre id="streaming"></pre> 
+    </div>
+    <div id="break">
+      <p><br></p>
+    </div>
+    <div id="posters">
+      <h2>POSTERS</h2>
+      <h5>Upload and download posters</h5>
+    
+      <!-- Search Section -->
+      <div>
+        <p>Enter imdb ID:</p>
+        <input type="text" id="imdbID-poster-input">
+        <button onclick="getPoster()">Search</button>
+        <br><br>
+        <p id="no-poster"></p>
+        <img id="poster">
+      </div>
+    
+      <!-- Upload Section -->
+      <div>
+        <p>Enter the imdbID:</p>
+        <input type="text" id="filename-input">
+        <br>
+        <p>Upload a poster for the movie:</p>
+        <input type="file" id="image-input">
+        <br>
+        <button onclick="uploadPoster(event)">Upload</button>
+        <p id="upload-result"></p>
+      </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+      function getMovieByTitle(){
+        //Refresh info and streaming section
+        document.getElementById("info").textContent = "";
+        document.getElementById("streaming").textContent = "";
+
+        const movieTitle = document.getElementById("title-input").value;
+        fetch(`http://localhost:4000/movies/search/${movieTitle}`)
+        .then(res => res.json())
+        .then(data => {
+          for (i=0; i<data.Search.length; i++){
+            document.getElementById("info").textContent += 
+            `Title : ${data.Search[i].Title}\nYear: ${data.Search[i].Year}\nimdbID : ${data.Search[i].imdbID}\nType : ${data.Search[i].Type}\n\n`
+          };
+        })
+        .catch(error => {
+          //If there is no user input, send an alert message to the user.
+          if (movieTitle === ""){
+            console.error(error.message);
+            alert(" Movie title not provided. Please type in a movie title");
+          }
+          //If the user input is not valid, send an alert message to the user to type correct input.
+          else {
+            console.error(error.message);
+            alert("No movie found. Please type in a correct movie title")
+          };
+        });
+      };
+
+      function getMovieByImdbID(){
+        //Refresh info and streaming section
+        document.getElementById("info").textContent = "";
+        document.getElementById("streaming").textContent = "";
+
+        const imdbID = document.getElementById("imdbID-input").value;
+        fetch(`http://localhost:4000/movies/data/${imdbID}`)
+        .then(res => res.json())
+        .then(data => {
+          //If the imdbID is not valid, throw a new error to handle later.
+          if (data.details.Response === "False"){
+            throw new Error ("No movie found with the ID")
+          } 
+          else {
+            console.log(data.details)
+            document.getElementById("info").textContent = 
+            `Movie data found with the imdbID - ${imdbID}\n\n`+
+            `Title : ${data.details.Title}\nYear : ${data.details.Year}\nRated : ${data.details.Rated}\n`+
+            `Realease : ${data.details.Released}\nRuntime : ${data.details.Runtime}\n`+
+            `Genre : ${data.details.Genre}\nDirector : ${data.details.Director}\nWriter : ${data.details.Writer}\n`+
+            `Actors : ${data.details.Actors}\nPlot : ${data.details.Plot}\n`+
+            `Language : ${data.details.Language}\nCountry : ${data.details.Country}\nAwards : ${data.details.Awards}\n`+
+            `Meta Score : ${data.details.Metascore}\nimdb Rating : ${data.details.imdbRating}\n`
+          };
+
+          const streamingObj = data.streamingInfo;
+          //If there is no error message in streaming information data, loop through each providers and providers' streaming options and display the streaming info.
+          if (streamingObj.error !== true){
+            const providers = Object.keys(streamingObj);
+            document.getElementById("streaming").innerHTML = `Streaming Information:<br>`;
+            for (let i=0; i<providers.length; i++) {
+              for (let j=0; j<streamingObj[providers[i]].length; j++) {
+                const type = streamingObj[providers[i]][j].type;
+                const link = streamingObj[providers[i]][j].link;
+                document.getElementById("streaming").innerHTML += 
+                `<br>&lt;${providers[i]}&gt;<br>Type: ${type}<br>Link: <a href="${link}">${link}</a><br>`;
+              };
+            };
+          } 
+          else {
+            document.getElementById("streaming").innerHTML = `Streaming Information: There is no streaming information available`;
+          };
+        })
+        .catch(error => {
+          if (imdbID === ""){
+            console.error(error.message);
+            alert("imdbID not provided. Please type in a valid imdbID");
+          }
+          else if (error.message === "No movie found with the ID"){
+            console.error(error.message);
+            alert("No movie found. Please type in a correct imdbID");
+          };
+        });
+      };
+      
+      function getPoster(){
+        document.getElementById("no-poster").textContent = "";
+        document.getElementById("poster").src = '';
+        document.getElementById("poster").alt = '';
+        const imdbID = document.getElementById("imdbID-poster-input").value;
+        fetch(`http://localhost:4000/posters/${imdbID}`)
+        .then(res => res.arrayBuffer())
+        .then(data => {
+          if (data.byteLength > 100){
+            const imageBuffer = new Uint8Array(data);
+            const base64String = btoa(String.fromCharCode.apply(null, imageBuffer));
+            const imageUrl = `data:image/jpeg;base64,${base64String}`;
+   
+            const imageElement = document.getElementById('poster');
+            imageElement.src = imageUrl;
+            imageElement.alt = imdbID; 
+          } else {
+            throw new Error
+          } 
+        })
+        .catch(error => {
+          //If there is no user input, send an alert message to the user.
+          if (imdbID === ""){
+            console.error(error.message);
+            alert("imdbID not provided. Please type in a valid imdbID");
+          }
+          //If the user input is not valid, send an alert message to the user to type correct input.
+          else {
+            console.error(error.message);
+            document.getElementById('no-poster').textContent = "No poster found."
+            alert("No poster found. Please type in a correct imdbID")
+          };
+        });
+      };
+
+      function uploadPoster(event) {
+        event.preventDefault();
+
+        const imdbID = document.getElementById("filename-input").value;
+        const fileInput = document.getElementById("image-input");
+        const file = fileInput.files[0];
+
+        // Create a FormData object to send the data as multipart/form-data
+        const formData = new FormData();
+
+        formData.append("imdbID", imdbID);
+        formData.append("poster", file);
+        
+        // Make AJAX request
+        $.ajax({
+          url: `http://localhost:4000/posters/add/${imdbID}`,  
+          type: 'POST',
+          data: formData,
+          processData: false,
+          contentType: false,
+          success: function(data) {
+            // Handle the response from the server
+            document.getElementById("upload-result").textContent = "File uploaded - " + imdbID + ".jpg";            
+          },
+          error: function(error) {
+            if (!file && imdbID === ""){
+              console.error(error.message);
+              alert ("Please provide an imdbID and select an image file");
+            } 
+            else if (imdbID === ""){
+              console.error(error.message)
+              alert ("Please provide an imdbID");
+            }
+            else if (!file){
+              console.error(error.message);
+              alert ("Please select an image file");
+            }
+          }
+        });
+      }
+    </script>
+  </body>
+</html>
